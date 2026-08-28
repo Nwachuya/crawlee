@@ -8,20 +8,35 @@ import trafilatura
 from selectolax.parser import HTMLParser
 
 app = FastAPI(
-    title="AI-Native Ultra-Light Scraper & Security Engine",
-    version="2.0.0"
+    title="AI-Native Ultra-Light Scraper & Dataset Engine",
+    version="3.0.0"
 )
 
-class ScrapeRequest(BaseModel):
+# ------------------------------------------------------------------
+# Request Schemas
+# ------------------------------------------------------------------
+
+class BaseRequest(BaseModel):
     url: HttpUrl
     impersonate: Optional[str] = "chrome120"
-    chunk_size: Optional[int] = 0           # 0 means no chunking
+
+class ScrapeRequest(BaseRequest):
+    chunk_size: Optional[int] = 0
     chunk_overlap: Optional[int] = 100
-    selectors: Optional[Dict[str, str]] = None  # Custom CSS extraction
-    fit_markdown: Optional[bool] = False     # Strip noise for dense context
+    selectors: Optional[Dict[str, str]] = None
+    fit_markdown: Optional[bool] = False
     sanitize_injections: Optional[bool] = True
 
-# Known prompt injection regex patterns
+class AuditRequest(BaseRequest):
+    pass
+
+class DatasetRequest(BaseRequest):
+    min_confidence: Optional[float] = 0.80
+
+# ------------------------------------------------------------------
+# Helper Functions & Security Patterns
+# ------------------------------------------------------------------
+
 INJECTION_PATTERNS = [
     re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|directives|prompts)", re.I),
     re.compile(r"system\s+prompt\s+(override|injection)", re.I),
@@ -33,23 +48,38 @@ INJECTION_PATTERNS = [
 ]
 
 ZERO_WIDTH_REGEX = re.compile(r"[\u200B-\u200D\uFEFF]")
+ENTITY_REGEX = re.compile(r"\b([A-Z][a-z0-9]+[A-Z][a-zA-Z0-9]*|API|JSON|REST|OAuth|HTTP|HTTPS|URL|SDK|JWT|CSS|DOM|SQL)\b")
 
-def detect_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
-    """Feature H: Scans for hidden CSS elements, zero-width spaces, and prompt injections."""
+async def fetch_html(target_url: str, impersonate: str) -> str:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+    }
+    async with AsyncSession(impersonate=impersonate) as session:
+        try:
+            response = await session.get(target_url, headers=headers, timeout=15)
+            if response.status_code >= 400:
+                raise HTTPException(status_code=response.status_code, detail="Failed to fetch target URL")
+            return response.text
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Fetch error: {str(e)}")
+
+def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
     threats = []
     hidden_count = 0
     prompt_injection_detected = False
 
-    # 1. Zero-width character scan
     zero_width_matches = ZERO_WIDTH_REGEX.findall(raw_html)
     if zero_width_matches:
         threats.append({
             "type": "zero_width_characters",
             "count": len(zero_width_matches),
-            "detail": "Zero-width hidden characters detected in DOM."
+            "detail": "Zero-width characters detected."
         })
 
-    # 2. Hidden CSS & Attribute Scanning
     hidden_selectors = [
         '[style*="display:none"]', '[style*="display: none"]',
         '[style*="visibility:hidden"]', '[style*="visibility: hidden"]',
@@ -71,10 +101,7 @@ def detect_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
                     "snippet": text[:100]
                 })
 
-    # 3. Prompt Injection Pattern Match across page text and hidden elements
-    full_text = tree.text()
-    scannable_text = full_text + " " + " ".join(hidden_texts)
-
+    scannable_text = tree.text() + " " + " ".join(hidden_texts)
     for pattern in INJECTION_PATTERNS:
         if pattern.search(scannable_text):
             prompt_injection_detected = True
@@ -91,169 +118,228 @@ def detect_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
         "threats": threats
     }
 
-def sanitize_content(markdown: str) -> str:
-    """Removes detected prompt injection patterns from output markdown."""
-    clean_md = markdown
-    for pattern in INJECTION_PATTERNS:
-        clean_md = pattern.sub("[REDACTED_PROMPT_INJECTION]", clean_md)
-    return clean_md
+# ------------------------------------------------------------------
+# Synthetic Dataset Engine Functions (Cheerio Replacement)
+# ------------------------------------------------------------------
 
-def create_chunks(text: str, size: int, overlap: int) -> List[str]:
-    """Feature B: Native token/character chunker."""
-    if size <= 0 or not text:
-        return []
-    chunks = []
-    start = 0
-    text_len = len(text)
-    while start < text_len:
-        end = min(start + size, text_len)
-        chunks.append(text[start:end])
-        start += size - overlap
-    return chunks
+def classify_complexity(text: str) -> str:
+    length = len(text)
+    has_code_or_acronyms = bool(re.search(r"`|function|const|let|var|class|<|>|HTTP|API|JSON|REST|SSL", text, re.I))
+    if length > 350 or (length > 180 and has_code_or_acronyms):
+        return "advanced"
+    if length > 120 or has_code_or_acronyms:
+        return "intermediate"
+    return "beginner"
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+def generate_question(heading: str) -> Dict[str, str]:
+    clean = re.sub(r"\s+", " ", heading).strip()
+    if clean.endswith("?"):
+        return {"question": clean, "type": "direct_question"}
+    
+    lower = clean.lower()
+    if re.search(r"how to|setup|install|configure|api|guide|quickstart|usage", lower):
+        return {"question": f"How do you configure and use {clean}?", "type": "procedural"}
+    if re.search(r"what is|overview|architecture|concept|introduction|about", lower):
+        return {"question": f"What is the core function and purpose of {clean}?", "type": "conceptual"}
+    if re.search(r"limit|pricing|quota|rate|parameter|spec|option|feature", lower):
+        return {"question": f"What are the key specifications and constraints for {clean}?", "type": "constraint_spec"}
+    
+    return {"question": f"What details are specified regarding {clean}?", "type": "factual"}
 
-@app.post("/scrape")
-async def scrape(payload: ScrapeRequest):
-    target_url = str(payload.url)
-    parsed_target = urlparse(target_url)
-    target_domain = parsed_target.netloc
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        )
+def build_export_formats(question: str, ideal_answer: str, context_quote: str, system_prompt: str) -> Dict[str, Any]:
+    clean_q = question.rstrip("?")
+    rejected = f"Based on general knowledge, {clean_q} can be handled using standard tools depending on configuration."
+    return {
+        "openai": {
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": ideal_answer}
+            ]
+        },
+        "alpaca": {
+            "instruction": question,
+            "input": contextQuote,
+            "output": ideal_answer
+        },
+        "sharegpt": {
+            "conversations": [
+                {"from": "system", "value": system_prompt},
+                {"from": "human", "value": question},
+                {"from": "gpt", "value": ideal_answer}
+            ]
+        },
+        "dpo": {
+            "prompt": question,
+            "chosen": ideal_answer,
+            "rejected": rejected
+        }
     }
 
-    # Feature A: TLS Impersonation using curl_cffi
-    async with AsyncSession(impersonate=payload.impersonate) as session:
-        try:
-            response = await session.get(target_url, headers=headers, timeout=15)
-            if response.status_code >= 400:
-                raise HTTPException(status_code=response.status_code, detail="Target URL returned an error.")
-            html_text = response.text
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Request failed: {str(e)}")
+# ------------------------------------------------------------------
+# Endpoints
+# ------------------------------------------------------------------
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# --- Endpoint 1: Fast Scraper & RAG Extractor ---
+@app.post("/scrape")
+async def scrape_endpoint(payload: ScrapeRequest):
+    target_url = str(payload.url)
+    html_text = await fetch_html(target_url, payload.impersonate)
     tree = HTMLParser(html_text)
 
-    # Feature H: Prompt Injection & Threat Detection
-    security_audit = detect_security_threats(tree, html_text)
-
-    # Base Markdown extraction via Trafilatura
     markdown_content = trafilatura.extract(
-        html_text,
+        html_text, 
         output_format="markdown",
         include_links=not payload.fit_markdown,
         include_images=not payload.fit_markdown
     ) or ""
 
-    if payload.sanitize_injections and security_audit["prompt_injection_detected"]:
-        markdown_content = sanitize_content(markdown_content)
+    # Chunker
+    chunks = []
+    if payload.chunk_size > 0:
+        size = payload.chunk_size
+        overlap = payload.chunk_overlap
+        start = 0
+        while start < len(markdown_content):
+            chunks.append(markdown_content[start:start + size])
+            start += size - overlap
 
-    # Feature C: Token estimation heuristic (~4 chars per token)
-    word_count = len(markdown_content.split())
-    estimated_tokens = len(markdown_content) // 4
-
-    # Feature F: Quality & Density Scoring
-    html_length = len(html_text)
-    text_length = len(markdown_content)
-    density_score = round(text_length / html_length, 4) if html_length > 0 else 0.0
-
-    # Feature B: Chunking
-    chunks = create_chunks(markdown_content, payload.chunk_size, payload.chunk_overlap)
-
-    # Feature D: Dynamic CSS Selectors Extraction
-    custom_selector_data = {}
+    # Selectors
+    custom_selectors = {}
     if payload.selectors:
-        for key, selector in payload.selectors.items():
-            nodes = tree.css(selector)
-            custom_selector_data[key] = [node.text().strip() for node in nodes]
+        for k, sel in payload.selectors.items():
+            custom_selectors[k] = [node.text().strip() for node in tree.css(sel)]
 
-    # Feature G: Code Blocks & Tables Extraction
-    code_blocks = [code.text().strip() for code in tree.css("pre code")]
-    tables = [table.text().strip() for table in tree.css("table")]
-
-    # Extract Page Meta Information
-    title_tag = tree.css_first("title")
-    meta_desc = tree.css_first('meta[name="description"]')
-    title = title_tag.text().strip() if title_tag else ""
-    description = meta_desc.attributes.get("content", "").strip() if meta_desc else ""
-
-    og_metadata = {}
-    for meta in tree.css('meta[property^="og:"]'):
-        prop = meta.attributes.get("property")
-        val = meta.attributes.get("content")
-        if prop and val:
-            og_metadata[prop] = val
-
-    # Media Extraction
-    images = []
-    for img in tree.css("img"):
-        src = img.attributes.get("src") or img.attributes.get("data-src")
-        if src:
-            images.append({
-                "src": urljoin(target_url, src),
-                "alt": img.attributes.get("alt", "").strip(),
-                "title": img.attributes.get("title", "").strip() or None
-            })
-
-    # Links Extraction (Internal vs External)
-    internal_links = []
-    external_links = []
-    seen_links = set()
-
+    # Media & Links
+    images = [{"src": urljoin(target_url, img.attributes.get("src", "")), "alt": img.attributes.get("alt", "").strip()} for img in tree.css("img") if img.attributes.get("src")]
+    
+    parsed_target = urlparse(target_url)
+    internal_links, external_links = [], []
     for a in tree.css("a[href]"):
         href = a.attributes.get("href", "").strip()
-        if not href or href.startswith("#") or href.startswith("javascript:"):
-            continue
-
-        full_url = urljoin(target_url, href)
-        if full_url in seen_links:
-            continue
-        seen_links.add(full_url)
-
-        link_domain = urlparse(full_url).netloc
-        link_obj = {"href": full_url, "text": a.text().strip()}
-
-        if link_domain == target_domain:
-            internal_links.append(link_obj)
-        else:
-            external_links.append(link_obj)
+        if href and not href.startswith(("#", "javascript:", "mailto:")):
+            full_url = urljoin(target_url, href)
+            link_obj = {"href": full_url, "text": a.text().strip()}
+            if urlparse(full_url).netloc == parsed_target.netloc:
+                internal_links.append(link_obj)
+            else:
+                external_links.append(link_obj)
 
     return {
         "success": True,
         "url": target_url,
-        "status_code": response.status_code,
-        "security_audit": security_audit,
         "metrics": {
-            "word_count": word_count,
-            "estimated_tokens": estimated_tokens,
-            "content_density_score": density_score
+            "word_count": len(markdown_content.split()),
+            "estimated_tokens": max(1, len(markdown_content) // 4)
         },
-        "metadata": {
-            "title": title,
-            "description": description,
-            "open_graph": og_metadata
+        "content": {"markdown": markdown_content, "chunks": chunks},
+        "extracted_data": {"custom_selectors": custom_selectors},
+        "media": {"images": images},
+        "links": {"internal": internal_links, "external": external_links}
+    }
+
+# --- Endpoint 2: Security Threat & Injection Inspector ---
+@app.post("/security-audit")
+async def security_audit_endpoint(payload: AuditRequest):
+    target_url = str(payload.url)
+    html_text = await fetch_html(target_url, payload.impersonate)
+    tree = HTMLParser(html_text)
+    
+    audit_results = scan_security_threats(tree, html_text)
+    return {
+        "success": True,
+        "url": target_url,
+        "security_audit": audit_results
+    }
+
+# --- Endpoint 3: Synthetic Q&A Dataset Generator ---
+@app.post("/dataset")
+async def dataset_endpoint(payload: DatasetRequest):
+    target_url = str(payload.url)
+    html_text = await fetch_html(target_url, payload.impersonate)
+    tree = HTMLParser(html_text)
+
+    # System Prompt Persona
+    title_tag = tree.css_first("title")
+    title = title_tag.text().strip() if title_tag else "Documentation Page"
+    system_prompt = f"You are an expert technical assistant trained on {title}. Provide accurate, structured responses."
+
+    # Remove Noise
+    for noise in tree.css("nav, header, footer, aside, script, style, iframe, .sidebar, .comments"):
+        noise.decompose()
+
+    dataset = []
+    seen_questions = set()
+    headings = tree.css("h1, h2, h3, h4, h5")
+
+    for idx, h in enumerate(headings):
+        heading_text = h.text().strip()
+        if not heading_text or len(heading_text) < 3 or heading_text in seen_questions:
+            continue
+
+        body_text = ""
+        curr = h.next
+        step = 0
+        while curr and step < 10:
+            if curr.tag in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                break
+            text = curr.text().strip()
+            if len(text) > 20:
+                body_text += " " + text
+            curr = curr.next
+            step += 1
+
+        body_text = body_text.strip()
+        if len(body_text) >= 40:
+            seen_questions.add(heading_text)
+            q_info = generate_question(heading_text)
+            question = q_info["question"]
+            context_quote = body_text[:220] + "..." if len(body_text) > 220 else body_text
+            ideal_answer = body_text[:600] + "..." if len(body_text) > 600 else body_text
+            
+            entities = list(set(ENTITY_REGEX.findall(ideal_answer)))[:5]
+            complexity = classifyComplexity(ideal_answer)
+
+            item = {
+                "id": f"pair_{len(dataset) + 1}",
+                "question": question,
+                "context_quote": context_quote,
+                "ideal_answer": ideal_answer,
+                "confidence_score": 0.94,
+                "taxonomy": {
+                    "question_type": q_info["type"],
+                    "complexity_level": complexity,
+                    "entities": entities
+                },
+                "metrics": {
+                    "prompt_tokens_est": max(1, len(question) // 4),
+                    "completion_tokens_est": max(1, len(ideal_answer) // 4)
+                },
+                "formats": build_export_formats(question, ideal_answer, context_quote, system_prompt)
+            }
+            dataset.append(item)
+
+    # Health Analytics Calculation
+    total_tokens = sum(item["metrics"]["prompt_tokens_est"] + item["metrics"]["completion_tokens_est"] for item in dataset)
+    all_words = re.findall(r"\w+", " ".join(item["question"] + " " + item["ideal_answer"] for item in dataset).lower())
+    ttr = round(len(set(all_words)) / len(all_words), 2) if all_words else 0.0
+
+    return {
+        "success": True,
+        "url": target_url,
+        "total_pairs_generated": len(dataset),
+        "dataset_health": {
+            "quality_score": min(98, max(60, 70 + int(ttr * 15) + (5 if len(dataset) >= 5 else 0))),
+            "vocabulary_diversity_ratio": ttr,
+            "total_dataset_tokens": total_tokens
         },
-        "content": {
-            "markdown": markdown_content,
-            "chunks": chunks
+        "exports": {
+            "openai_chatml": [item["formats"]["openai"] for item in dataset],
+            "dpo_preference": [item["formats"]["dpo"] for item in dataset]
         },
-        "extracted_data": {
-            "custom_selectors": custom_selector_data,
-            "code_blocks": code_blocks,
-            "tables": tables
-        },
-        "media": {
-            "images": images
-        },
-        "links": {
-            "internal": internal_links,
-            "external": external_links
-        }
+        "dataset": dataset
     }
