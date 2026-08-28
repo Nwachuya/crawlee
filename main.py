@@ -2,7 +2,7 @@ import re
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse, urljoin
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 from curl_cffi.requests import AsyncSession
 import trafilatura
 from selectolax.parser import HTMLParser
@@ -21,11 +21,17 @@ class BaseRequest(BaseModel):
     impersonate: Optional[str] = "chrome120"
 
 class ScrapeRequest(BaseRequest):
-    chunk_size: Optional[int] = 0
-    chunk_overlap: Optional[int] = 100
+    chunk_size: int = Field(default=0, ge=0)
+    chunk_overlap: int = Field(default=100, ge=0)
     selectors: Optional[Dict[str, str]] = None
     fit_markdown: Optional[bool] = False
     sanitize_injections: Optional[bool] = True
+
+    @model_validator(mode="after")
+    def validate_chunk_settings(self) -> "ScrapeRequest":
+        if self.chunk_size > 0 and self.chunk_overlap >= self.chunk_size:
+            raise ValueError("chunk_overlap must be smaller than chunk_size when chunking is enabled")
+        return self
 
 class AuditRequest(BaseRequest):
     pass
@@ -64,8 +70,24 @@ async def fetch_html(target_url: str, impersonate: str) -> str:
             if response.status_code >= 400:
                 raise HTTPException(status_code=response.status_code, detail="Failed to fetch target URL")
             return response.text
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Fetch error: {str(e)}")
+
+def should_flag_hidden_text(selector: str, text: str) -> bool:
+    clean = " ".join(text.split()).strip()
+    if not clean:
+        return False
+    if any(pattern.search(clean) for pattern in INJECTION_PATTERNS):
+        return True
+
+    if selector in ('[aria-hidden="true"]', '[hidden]'):
+        return False
+
+    has_letters = bool(re.search(r"[A-Za-z]", clean))
+    has_enough_words = len(re.findall(r"\w+", clean)) >= 4
+    return has_letters and has_enough_words and len(clean) >= 20
 
 def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
     threats = []
@@ -89,16 +111,19 @@ def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
     ]
     
     hidden_texts = []
+    seen_hidden_snippets = set()
     for selector in hidden_selectors:
         for node in tree.css(selector):
             text = node.text().strip()
-            if text:
+            normalized = " ".join(text.split())
+            if normalized and should_flag_hidden_text(selector, normalized) and normalized not in seen_hidden_snippets:
+                seen_hidden_snippets.add(normalized)
                 hidden_count += 1
-                hidden_texts.append(text)
+                hidden_texts.append(normalized)
                 threats.append({
                     "type": "hidden_css_element",
                     "selector": selector,
-                    "snippet": text[:100]
+                    "snippet": normalized[:100]
                 })
 
     scannable_text = tree.text() + " " + " ".join(hidden_texts)
@@ -159,7 +184,7 @@ def build_export_formats(question: str, ideal_answer: str, context_quote: str, s
         },
         "alpaca": {
             "instruction": question,
-            "input": contextQuote,
+            "input": context_quote,
             "output": ideal_answer
         },
         "sharegpt": {
@@ -175,6 +200,48 @@ def build_export_formats(question: str, ideal_answer: str, context_quote: str, s
             "rejected": rejected
         }
     }
+
+def extract_sections_from_markdown(markdown_content: str) -> List[Dict[str, str]]:
+    sections = []
+    current_heading = ""
+    current_lines: List[str] = []
+
+    for line in markdown_content.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        if stripped.startswith("#"):
+            if current_heading:
+                body_text = " ".join(current_lines).strip()
+                if len(body_text) >= 40:
+                    sections.append({"heading": current_heading, "body": body_text})
+            current_heading = stripped.lstrip("#").strip()
+            current_lines = []
+            continue
+
+        if current_heading:
+            current_lines.append(stripped)
+
+    if current_heading:
+        body_text = " ".join(current_lines).strip()
+        if len(body_text) >= 40:
+            sections.append({"heading": current_heading, "body": body_text})
+
+    if sections:
+        return sections
+
+    paragraphs = [
+        " ".join(block.split())
+        for block in markdown_content.split("\n\n")
+        if len(" ".join(block.split())) >= 40
+    ]
+    return [
+        {"heading": f"Section {idx + 1}", "body": paragraph}
+        for idx, paragraph in enumerate(paragraphs)
+    ]
+
+    
 
 # ------------------------------------------------------------------
 # Endpoints
@@ -215,7 +282,14 @@ async def scrape_endpoint(payload: ScrapeRequest):
             custom_selectors[k] = [node.text().strip() for node in tree.css(sel)]
 
     # Media & Links
-    images = [{"src": urljoin(target_url, img.attributes.get("src", "")), "alt": img.attributes.get("alt", "").strip()} for img in tree.css("img") if img.attributes.get("src")]
+    images = [
+        {
+            "src": urljoin(target_url, img.attributes.get("src", "")),
+            "alt": (img.attributes.get("alt") or "").strip(),
+        }
+        for img in tree.css("img")
+        if img.attributes.get("src")
+    ]
     
     parsed_target = urlparse(target_url)
     internal_links, external_links = [], []
@@ -262,6 +336,12 @@ async def dataset_endpoint(payload: DatasetRequest):
     target_url = str(payload.url)
     html_text = await fetch_html(target_url, payload.impersonate)
     tree = HTMLParser(html_text)
+    markdown_content = trafilatura.extract(
+        html_text,
+        output_format="markdown",
+        include_links=False,
+        include_images=False
+    ) or ""
 
     # System Prompt Persona
     title_tag = tree.css_first("title")
@@ -302,7 +382,7 @@ async def dataset_endpoint(payload: DatasetRequest):
             ideal_answer = body_text[:600] + "..." if len(body_text) > 600 else body_text
             
             entities = list(set(ENTITY_REGEX.findall(ideal_answer)))[:5]
-            complexity = classifyComplexity(ideal_answer)
+            complexity = classify_complexity(ideal_answer)
 
             item = {
                 "id": f"pair_{len(dataset) + 1}",
@@ -322,6 +402,39 @@ async def dataset_endpoint(payload: DatasetRequest):
                 "formats": build_export_formats(question, ideal_answer, context_quote, system_prompt)
             }
             dataset.append(item)
+
+    if not dataset and markdown_content:
+        for section in extract_sections_from_markdown(markdown_content):
+            heading_text = section["heading"]
+            if heading_text in seen_questions:
+                continue
+
+            seen_questions.add(heading_text)
+            q_info = generate_question(heading_text)
+            question = q_info["question"]
+            body_text = section["body"]
+            context_quote = body_text[:220] + "..." if len(body_text) > 220 else body_text
+            ideal_answer = body_text[:600] + "..." if len(body_text) > 600 else body_text
+            entities = list(set(ENTITY_REGEX.findall(ideal_answer)))[:5]
+            complexity = classify_complexity(ideal_answer)
+
+            dataset.append({
+                "id": f"pair_{len(dataset) + 1}",
+                "question": question,
+                "context_quote": context_quote,
+                "ideal_answer": ideal_answer,
+                "confidence_score": 0.94,
+                "taxonomy": {
+                    "question_type": q_info["type"],
+                    "complexity_level": complexity,
+                    "entities": entities
+                },
+                "metrics": {
+                    "prompt_tokens_est": max(1, len(question) // 4),
+                    "completion_tokens_est": max(1, len(ideal_answer) // 4)
+                },
+                "formats": build_export_formats(question, ideal_answer, context_quote, system_prompt)
+            })
 
     # Health Analytics Calculation
     total_tokens = sum(item["metrics"]["prompt_tokens_est"] + item["metrics"]["completion_tokens_est"] for item in dataset)
