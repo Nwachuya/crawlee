@@ -1,4 +1,6 @@
+import html
 import re
+import unicodedata
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse, urljoin
 from fastapi import FastAPI, HTTPException
@@ -50,11 +52,26 @@ INJECTION_PATTERNS = [
     re.compile(r"you\s+are\s+now\s+(in\s+)?(dan|developer|god)\s+mode", re.I),
     re.compile(r"new\s+system\s+instruction:", re.I),
     re.compile(r"print\s+your\s+(initial|system)\s+prompt", re.I),
-    re.compile(r"override\s+safety\s+guidelines", re.I)
+    re.compile(r"override\s+safety\s+guidelines", re.I),
+    re.compile(r"ignore\s+prior\s+rules", re.I),
+    re.compile(r"override\s+system\s+prompt", re.I),
+    re.compile(r"output\s+(all\s+)?(environment\s+variables|env)\b", re.I),
+    re.compile(r"exfiltrate\s+(page\s+contents|database\s+keys|data)\b", re.I),
+    re.compile(r"reveal\s+your\s+system\s+prompt", re.I)
 ]
 
 ZERO_WIDTH_REGEX = re.compile(r"[\u200B-\u200D\uFEFF]")
 ENTITY_REGEX = re.compile(r"\b([A-Z][a-z0-9]+[A-Z][a-zA-Z0-9]*|API|JSON|REST|OAuth|HTTP|HTTPS|URL|SDK|JWT|CSS|DOM|SQL)\b")
+COMMENT_REGEX = re.compile(r"<!--(.*?)-->", re.S)
+
+SECRET_PATTERNS = [
+    ("stripe_live_key", re.compile(r"\bsk_live_[A-Za-z0-9]+\b")),
+    ("github_pat", re.compile(r"\bghp_[A-Za-z0-9]+\b")),
+    ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("anthropic_api_key", re.compile(r"\bsk-ant-[A-Za-z0-9-]+\b")),
+    ("bearer_token", re.compile(r"\bBearer\s+[A-Za-z0-9._\-]+\b", re.I)),
+    ("generic_secret_assignment", re.compile(r"\b(?:api[_-]?key|secret|token)\b\s*[:=]\s*[\"']?[A-Za-z0-9._\-]{16,}", re.I)),
+]
 
 async def fetch_html(target_url: str, impersonate: str) -> str:
     headers = {
@@ -89,6 +106,26 @@ def should_flag_hidden_text(selector: str, text: str) -> bool:
     has_enough_words = len(re.findall(r"\w+", clean)) >= 4
     return has_letters and has_enough_words and len(clean) >= 20
 
+
+def normalize_text(text: str) -> str:
+    decoded = html.unescape(text or "")
+    normalized = unicodedata.normalize("NFKC", decoded)
+    return ZERO_WIDTH_REGEX.sub(" ", normalized)
+
+
+def collect_secret_findings(text: str, source_type: str, source_hint: str = "") -> List[Dict[str, Any]]:
+    findings = []
+    for secret_type, pattern in SECRET_PATTERNS:
+        for match in pattern.finditer(text):
+            findings.append({
+                "type": "secret_pattern",
+                "secret_type": secret_type,
+                "source": source_type,
+                "location": source_hint,
+                "snippet": match.group(0)[:100],
+            })
+    return findings
+
 def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
     threats = []
     hidden_count = 0
@@ -107,6 +144,9 @@ def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
         '[style*="visibility:hidden"]', '[style*="visibility: hidden"]',
         '[style*="opacity:0"]', '[style*="opacity: 0"]',
         '[style*="font-size:0"]', '[style*="font-size: 0"]',
+        '[style*="left:-9999px"]', '[style*="left: -9999px"]',
+        '[style*="top:-9999px"]', '[style*="top: -9999px"]',
+        '[style*="position:absolute"]', '[style*="position: absolute"]',
         '[aria-hidden="true"]', '[hidden]'
     ]
     
@@ -115,7 +155,7 @@ def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
     for selector in hidden_selectors:
         for node in tree.css(selector):
             text = node.text().strip()
-            normalized = " ".join(text.split())
+            normalized = " ".join(normalize_text(text).split())
             if normalized and should_flag_hidden_text(selector, normalized) and normalized not in seen_hidden_snippets:
                 seen_hidden_snippets.add(normalized)
                 hidden_count += 1
@@ -125,8 +165,48 @@ def scan_security_threats(tree: HTMLParser, raw_html: str) -> Dict[str, Any]:
                     "selector": selector,
                     "snippet": normalized[:100]
                 })
+                if any(pattern.search(normalized) for pattern in INJECTION_PATTERNS):
+                    prompt_injection_detected = True
 
-    scannable_text = tree.text() + " " + " ".join(hidden_texts)
+    # Comments
+    for comment in COMMENT_REGEX.findall(raw_html):
+        normalized = " ".join(normalize_text(comment).split())
+        if any(pattern.search(normalized) for pattern in INJECTION_PATTERNS):
+            prompt_injection_detected = True
+            threats.append({
+                "type": "comment_injection",
+                "snippet": normalized[:100],
+            })
+
+    # Meta tags and attribute carriers
+    for node in tree.css("meta, img, input, textarea, button, a"):
+        for attr_name, attr_value in node.attributes.items():
+            if not attr_value:
+                continue
+            normalized = " ".join(normalize_text(attr_value).split())
+            if any(pattern.search(normalized) for pattern in INJECTION_PATTERNS):
+                prompt_injection_detected = True
+                threats.append({
+                    "type": "attribute_injection",
+                    "tag": node.tag,
+                    "attribute": attr_name,
+                    "snippet": normalized[:100],
+                })
+            threats.extend(collect_secret_findings(normalized, "attribute", f"{node.tag}[{attr_name}]"))
+
+    # Script contents
+    for script in tree.css("script"):
+        script_text = script.text()
+        normalized = normalize_text(script_text)
+        threats.extend(collect_secret_findings(normalized, "script"))
+        if any(pattern.search(normalized) for pattern in INJECTION_PATTERNS):
+            prompt_injection_detected = True
+            threats.append({
+                "type": "script_injection",
+                "snippet": " ".join(normalized.split())[:100],
+            })
+
+    scannable_text = normalize_text(tree.text()) + " " + " ".join(hidden_texts)
     for pattern in INJECTION_PATTERNS:
         if pattern.search(scannable_text):
             prompt_injection_detected = True
