@@ -1,4 +1,4 @@
-# crawl
+# crawlee
 
 Ultra-light FastAPI service for three web-content workflows:
 
