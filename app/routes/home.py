@@ -1,0 +1,865 @@
+from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
+
+router = APIRouter()
+
+HOME_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crawlee — Web Intelligence API</title>
+  <meta name="description" content="Crawlee is a FastAPI service for adaptive web scraping, prompt-injection security auditing, and synthetic Q&A dataset generation. 15 platform detectors. Zero-browser architecture." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-background: #f6f6f4;
+      --color-surface: #ffffff;
+      --color-text: #141414;
+      --color-text-muted: #8a8a86;
+      --color-border: #e3e3de;
+      --color-border-light: #eeeeea;
+      --color-accent: #121212;
+      --color-accent-hover: #000000;
+      --color-accent-light: #eeeeea;
+      --color-success: #41D333;
+      --color-warning: #F8D311;
+      --color-danger: #F73730;
+      --radius: 0;
+      --radius-pill: 9999px;
+      --shadow-card: none;
+    }
+
+    html.dark {
+      --color-background: #141414;
+      --color-surface: #1e1e1e;
+      --color-text: #f6f6f4;
+      --color-text-muted: #9b9b96;
+      --color-border: #2e2e2a;
+      --color-border-light: #252522;
+      --color-accent: #f6f6f4;
+      --color-accent-hover: #ffffff;
+      --color-accent-light: #252522;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      letter-spacing: -0.012em;
+      background-color: var(--color-background);
+      color: var(--color-text);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(var(--color-border-light) 1px, transparent 1px),
+        linear-gradient(90deg, var(--color-border-light) 1px, transparent 1px);
+      background-size: 58px 58px;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 72px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    html.dark .topbar { background: rgba(20,20,20,0.85); }
+
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--color-text);
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--color-accent);
+      border-radius: var(--radius-pill);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+    .brand-mark iconify-icon { color: var(--color-background); font-size: 16px; }
+
+    .brand-name {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.03em;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .topbar-nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      border-radius: var(--radius-pill);
+      transition: color 0.2s ease, background 0.2s ease;
+      letter-spacing: -0.01em;
+    }
+    .topbar-nav a:hover,
+    .topbar-nav a.active {
+      color: var(--color-text);
+      background: var(--color-accent-light);
+    }
+
+    .topbar-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--color-border);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      background: var(--color-surface);
+      transition: all 0.3s ease;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-success);
+    }
+
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    .theme-toggle:hover { border-color: var(--color-accent); color: var(--color-text); }
+
+    /* PAGE WRAPPER */
+    .page { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* HERO */
+    .hero {
+      padding: 96px 0 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 32px;
+    }
+
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--color-surface);
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      max-width: 820px;
+      color: var(--color-text);
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      color: var(--color-text-muted);
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--color-accent);
+      color: var(--color-background);
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.3s ease, transform 0.2s ease;
+      letter-spacing: -0.012em;
+    }
+    .btn-primary:hover { background: var(--color-accent-hover); transform: translateY(-1px); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: transparent;
+      color: var(--color-text);
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      letter-spacing: -0.012em;
+    }
+    .btn-secondary:hover { border-color: var(--color-accent); background: var(--color-accent-light); }
+
+    /* DIVIDER */
+    .divider { border: none; border-top: 1px solid var(--color-border); margin: 0; }
+
+    /* ENDPOINTS SECTION */
+    .section { padding: 80px 0; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+    }
+    .section h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 48px; }
+
+    .endpoint-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--color-border);
+      background: var(--color-border);
+    }
+
+    .endpoint-card {
+      background: var(--color-surface);
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: background 0.2s ease;
+    }
+    .endpoint-card:hover { background: var(--color-accent-light); }
+
+    .endpoint-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .endpoint-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text);
+      font-size: 18px;
+      flex-shrink: 0;
+      transition: border-color 0.3s ease;
+    }
+
+    .method-badge {
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: var(--color-accent-light);
+      color: var(--color-text-muted);
+    }
+
+    .endpoint-card h3 {
+      font-size: 18px;
+      color: var(--color-text);
+    }
+
+    .endpoint-path {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--color-text-muted);
+      background: var(--color-background);
+      padding: 6px 10px;
+      border: 1px solid var(--color-border-light);
+      letter-spacing: 0;
+    }
+
+    .endpoint-desc {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      padding: 3px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      background: var(--color-background);
+    }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--color-border);
+      background: var(--color-border);
+      margin-bottom: 80px;
+    }
+    .stat-cell {
+      background: var(--color-surface);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-number {
+      font-family: 'Manrope', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--color-text);
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    /* CODE BLOCK */
+    .code-section { padding: 80px 0; }
+    .code-section h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 8px; }
+    .code-section .section-sub {
+      font-size: 15px;
+      color: var(--color-text-muted);
+      margin-bottom: 40px;
+    }
+
+    .code-tabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--color-border);
+      border-bottom: none;
+      background: var(--color-background);
+    }
+    .code-tab {
+      padding: 10px 20px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--color-text-muted);
+      border-right: 1px solid var(--color-border);
+      transition: all 0.2s ease;
+    }
+    .code-tab.active { background: var(--color-surface); color: var(--color-text); }
+    .code-tab:hover:not(.active) { color: var(--color-text); }
+
+    .code-block {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      padding: 32px;
+      overflow-x: auto;
+      display: none;
+    }
+    .code-block.active { display: block; }
+    .code-block pre {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--color-text);
+      white-space: pre;
+    }
+    .code-comment { color: var(--color-text-muted); }
+    .code-key { color: var(--color-text); }
+    .code-string { color: var(--color-text); opacity: 0.7; }
+
+    /* AUTH SECTION */
+    .auth-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .auth-box {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      padding: 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .auth-box h2 { font-size: 32px; margin-bottom: 16px; }
+    .auth-box p { font-size: 15px; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 24px; }
+
+    .auth-rule {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--color-border-light);
+      font-size: 14px;
+      color: var(--color-text-muted);
+    }
+    .auth-rule:last-child { border-bottom: none; }
+    .auth-rule iconify-icon { font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+    .auth-rule strong { color: var(--color-text); display: block; margin-bottom: 2px; }
+
+    .auth-code {
+      border: 1px solid var(--color-border);
+      background: var(--color-background);
+      padding: 24px;
+    }
+    .auth-code pre {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--color-text);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: 32px 0;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .footer-inner p { font-size: 13px; color: var(--color-text-muted); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .hero { padding: 64px 0 48px; }
+      .hero-actions { flex-direction: column; align-items: flex-start; }
+      .auth-box { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
+      .endpoint-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="brand" aria-label="Crawlee home">
+        <div class="brand-mark">
+          <iconify-icon icon="lucide:zap" aria-hidden="true"></iconify-icon>
+        </div>
+        <span class="brand-name">Crawlee</span>
+      </a>
+      <div class="topbar-right">
+        <nav class="topbar-nav" aria-label="Page sections">
+          <a href="#endpoints" id="nav-endpoints">Endpoints</a>
+          <a href="#examples" id="nav-examples">Quick start</a>
+          <a href="#auth" id="nav-auth">Auth</a>
+        </nav>
+        <div class="topbar-divider" aria-hidden="true"></div>
+        <div class="status-badge">
+          <span class="status-dot" aria-hidden="true"></span>
+          Operational
+        </div>
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
+          <iconify-icon id="themeIcon" icon="lucide:moon" aria-hidden="true"></iconify-icon>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="page">
+
+      <!-- HERO -->
+      <section class="hero">
+        <span class="hero-label">
+          <iconify-icon icon="lucide:cpu" aria-hidden="true"></iconify-icon>
+          Web Intelligence API
+        </span>
+        <h1>Extract, audit, and train from any page on the web.</h1>
+        <p class="hero-sub">
+          Crawlee fetches pages through a TLS-spoofing client, fingerprints the underlying platform, picks the right extraction strategy, and returns clean structured data. No browser. No headless overhead.
+        </p>
+        <div class="hero-actions">
+          <a href="#endpoints" class="btn-primary" id="viewEndpointsBtn">
+            View endpoints
+            <iconify-icon icon="lucide:arrow-down" aria-hidden="true"></iconify-icon>
+          </a>
+          <a href="#auth" class="btn-secondary" id="viewAuthBtn">
+            Authentication
+            <iconify-icon icon="lucide:key" aria-hidden="true"></iconify-icon>
+          </a>
+        </div>
+      </section>
+
+    </div>
+
+    <hr class="divider" />
+
+    <!-- STATS -->
+    <div class="page">
+      <div class="stats-row" style="margin-top: 80px;" role="list" aria-label="Key metrics">
+        <div class="stat-cell" role="listitem">
+          <span class="stat-number">15</span>
+          <span class="stat-label">Platform detectors</span>
+        </div>
+        <div class="stat-cell" role="listitem">
+          <span class="stat-number">7</span>
+          <span class="stat-label">Extraction strategy families</span>
+        </div>
+        <div class="stat-cell" role="listitem">
+          <span class="stat-number">3</span>
+          <span class="stat-label">Core endpoints</span>
+        </div>
+        <div class="stat-cell" role="listitem">
+          <span class="stat-number">36</span>
+          <span class="stat-label">Regression tests</span>
+        </div>
+      </div>
+
+      <!-- ENDPOINTS -->
+      <section class="section" id="endpoints" aria-labelledby="endpointsHeading">
+        <p class="section-label">Endpoints</p>
+        <h2 id="endpointsHeading">Three workflows. One base URL.</h2>
+
+        <div class="endpoint-grid" role="list">
+
+          <div class="endpoint-card" role="listitem">
+            <div class="endpoint-header">
+              <div class="endpoint-icon" aria-hidden="true">
+                <iconify-icon icon="lucide:scan-text"></iconify-icon>
+              </div>
+              <span class="method-badge">POST</span>
+            </div>
+            <h3>Adaptive Scrape</h3>
+            <div class="endpoint-path">/api/v1/scrape</div>
+            <p class="endpoint-desc">
+              Detects the site platform, selects the matching extraction strategy, and returns markdown, internal and external links, images, and optional token-aware chunks. Falls back deterministically, never silently.
+            </p>
+            <div class="tag-list" aria-label="Supported platforms">
+              <span class="tag">WordPress</span>
+              <span class="tag">Shopify</span>
+              <span class="tag">Next.js</span>
+              <span class="tag">Webflow</span>
+              <span class="tag">Docusaurus</span>
+              <span class="tag">+10 more</span>
+            </div>
+          </div>
+
+          <div class="endpoint-card" role="listitem">
+            <div class="endpoint-header">
+              <div class="endpoint-icon" aria-hidden="true">
+                <iconify-icon icon="lucide:shield-check"></iconify-icon>
+              </div>
+              <span class="method-badge">POST</span>
+            </div>
+            <h3>Security Audit</h3>
+            <div class="endpoint-path">/api/v1/security-audit</div>
+            <p class="endpoint-desc">
+              Reads raw HTML before any extractor cleans it. Checks for hidden CSS injections, off-screen text, HTML comment vectors, hostile attributes, script-embedded secrets, and zero-width obfuscation.
+            </p>
+            <div class="tag-list" aria-label="Threat categories">
+              <span class="tag">Prompt injection</span>
+              <span class="tag">Secret patterns</span>
+              <span class="tag">Hidden elements</span>
+              <span class="tag">Zero-width</span>
+            </div>
+          </div>
+
+          <div class="endpoint-card" role="listitem">
+            <div class="endpoint-header">
+              <div class="endpoint-icon" aria-hidden="true">
+                <iconify-icon icon="lucide:database"></iconify-icon>
+              </div>
+              <span class="method-badge">POST</span>
+            </div>
+            <h3>Dataset Generator</h3>
+            <div class="endpoint-path">/api/v1/dataset</div>
+            <p class="endpoint-desc">
+              Parses documentation-style pages into synthetic Q&amp;A pairs. Exports in OpenAI ChatML, Alpaca, ShareGPT, and DPO preference formats. Includes quality scores and token estimates per pair.
+            </p>
+            <div class="tag-list" aria-label="Export formats">
+              <span class="tag">OpenAI ChatML</span>
+              <span class="tag">DPO</span>
+              <span class="tag">Alpaca</span>
+              <span class="tag">ShareGPT</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- CODE EXAMPLES -->
+      <section class="code-section" id="examples" aria-labelledby="examplesHeading">
+        <p class="section-label">Quick start</p>
+        <h2 id="examplesHeading">Copy and run.</h2>
+        <p class="section-sub">All requests need your API key in the <code>X-Api-Key</code> header, except health.</p>
+
+        <div class="code-tabs" role="tablist" aria-label="Code examples">
+          <button class="code-tab active" role="tab" aria-selected="true" aria-controls="tab-scrape" id="btn-scrape" onclick="switchTab('scrape')">Scrape</button>
+          <button class="code-tab" role="tab" aria-selected="false" aria-controls="tab-audit" id="btn-audit" onclick="switchTab('audit')">Security audit</button>
+          <button class="code-tab" role="tab" aria-selected="false" aria-controls="tab-dataset" id="btn-dataset" onclick="switchTab('dataset')">Dataset</button>
+        </div>
+
+        <div id="tab-scrape" class="code-block active" role="tabpanel" aria-labelledby="btn-scrape">
+          <pre><span class="code-comment"># Scrape a page with platform detection</span>
+curl -X POST https://dock.sluxia.com/api/v1/scrape \
+  -H <span class="code-string">'Content-Type: application/json'</span> \
+  -H <span class="code-string">'X-Api-Key: your-key'</span> \
+  -d '{
+    <span class="code-key">"url"</span>: <span class="code-string">"https://stripe.com/docs"</span>,
+    <span class="code-key">"fit_markdown"</span>: true,
+    <span class="code-key">"chunk_size"</span>: 500,
+    <span class="code-key">"chunk_overlap"</span>: 80
+  }'</pre>
+        </div>
+
+        <div id="tab-audit" class="code-block" role="tabpanel" aria-labelledby="btn-audit">
+          <pre><span class="code-comment"># Audit a page for prompt injection and hidden threats</span>
+curl -X POST https://dock.sluxia.com/api/v1/security-audit \
+  -H <span class="code-string">'Content-Type: application/json'</span> \
+  -H <span class="code-string">'X-Api-Key: your-key'</span> \
+  -d '{
+    <span class="code-key">"url"</span>: <span class="code-string">"https://example.com"</span>
+  }'</pre>
+        </div>
+
+        <div id="tab-dataset" class="code-block" role="tabpanel" aria-labelledby="btn-dataset">
+          <pre><span class="code-comment"># Generate synthetic Q&A pairs from a docs page</span>
+curl -X POST https://dock.sluxia.com/api/v1/dataset \
+  -H <span class="code-string">'Content-Type: application/json'</span> \
+  -H <span class="code-string">'X-Api-Key: your-key'</span> \
+  -d '{
+    <span class="code-key">"url"</span>: <span class="code-string">"https://developers.cloudflare.com/fundamentals/"</span>,
+    <span class="code-key">"min_confidence"</span>: 0.85
+  }'</pre>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- AUTH -->
+    <section class="auth-section" id="auth" aria-labelledby="authHeading">
+      <div class="page">
+        <div class="auth-box">
+          <div>
+            <p class="section-label">Authentication</p>
+            <h2 id="authHeading">One header. Every request.</h2>
+            <p>
+              Pass your key in the <code>X-Api-Key</code> header on every call. The health endpoint is always open for uptime monitoring. Everything else is gated.
+            </p>
+            <div class="auth-rule">
+              <iconify-icon icon="lucide:check-circle" style="color: var(--color-success);" aria-hidden="true"></iconify-icon>
+              <div>
+                <strong>GET /api/v1/health</strong>
+                Always open. No key required.
+              </div>
+            </div>
+            <div class="auth-rule">
+              <iconify-icon icon="lucide:key" aria-hidden="true"></iconify-icon>
+              <div>
+                <strong>POST /api/v1/scrape</strong>
+                Requires X-Api-Key header.
+              </div>
+            </div>
+            <div class="auth-rule">
+              <iconify-icon icon="lucide:key" aria-hidden="true"></iconify-icon>
+              <div>
+                <strong>POST /api/v1/security-audit</strong>
+                Requires X-Api-Key header.
+              </div>
+            </div>
+            <div class="auth-rule">
+              <iconify-icon icon="lucide:key" aria-hidden="true"></iconify-icon>
+              <div>
+                <strong>POST /api/v1/dataset</strong>
+                Requires X-Api-Key header.
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="auth-code">
+              <pre><span class="code-comment"># Missing key</span>
+HTTP 401 {"detail": "Missing X-Api-Key header"}
+
+<span class="code-comment"># Wrong key</span>
+HTTP 403 {"detail": "Invalid API key"}
+
+<span class="code-comment"># Correct key</span>
+HTTP 200 {"success": true, ...}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <p>Crawlee is a private internal API. Requests require a valid API key.</p>
+      <p style="font-size: 12px;">v3.0.0</p>
+    </div>
+  </footer>
+
+  <script>
+    // Theme
+    (function () {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      document.getElementById('themeIcon').setAttribute('icon', isDark ? 'lucide:sun' : 'lucide:moon');
+    });
+
+    // Set correct icon on load
+    document.addEventListener('DOMContentLoaded', function () {
+      const isDark = document.documentElement.classList.contains('dark');
+      document.getElementById('themeIcon').setAttribute('icon', isDark ? 'lucide:sun' : 'lucide:moon');
+    });
+
+    // Active nav on scroll
+    (function () {
+      var sections = ['endpoints', 'examples', 'auth'];
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var navLink = document.getElementById('nav-' + entry.target.id);
+          if (navLink) {
+            if (entry.isIntersecting) {
+              document.querySelectorAll('.topbar-nav a').forEach(function (a) { a.classList.remove('active'); });
+              navLink.classList.add('active');
+            }
+          }
+        });
+      }, { threshold: 0.3 });
+      sections.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+    })();
+
+    // Code tabs
+    function switchTab(name) {
+      document.querySelectorAll('.code-tab').forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.code-block').forEach(function (b) { b.classList.remove('active'); });
+      document.getElementById('btn-' + name).classList.add('active');
+      document.getElementById('btn-' + name).setAttribute('aria-selected', 'true');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+  </script>
+
+</body>
+</html>"""
+
+
+@router.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def home():
+    return HTMLResponse(content=HOME_HTML)

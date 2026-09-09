@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from .routes.dataset import router as dataset_router
 from .routes.health import router as health_router
+from .routes.home import router as home_router
 from .routes.scrape import router as scrape_router
 from .routes.security_audit import router as security_audit_router
 
@@ -16,7 +17,7 @@ app = FastAPI(
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    if request.url.path == "/api/v1/health":
+    if request.url.path in ("/", "/api/v1/health"):
         return await call_next(request)
 
     api_key = os.environ.get("X_API_KEY", "")
@@ -32,6 +33,7 @@ async def api_key_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+app.include_router(home_router)
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(scrape_router, prefix="/api/v1")
 app.include_router(security_audit_router, prefix="/api/v1")
