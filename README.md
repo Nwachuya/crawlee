@@ -12,7 +12,9 @@ Dependencies use progressive top-level ranges in [requirements.in](/Users/o.nwac
 
 ## Endpoints
 
-### `GET /health`
+All endpoints are prefixed with `/api/v1`. Authenticated endpoints require the `X-Api-Key` header. `/health` is always open.
+
+### `GET /api/v1/health`
 
 Simple liveness endpoint:
 
@@ -20,7 +22,7 @@ Simple liveness endpoint:
 {"status":"ok"}
 ```
 
-### `POST /scrape`
+### `POST /api/v1/scrape`
 
 Fetches a target URL, detects the site type, chooses an extraction strategy, and returns markdown, links, images, optional chunks, plus diagnostics.
 
@@ -94,7 +96,7 @@ Example shape:
 
 #### Detector catalog
 
-The `/scrape` detector registry ships with 15 primary platform/framework detectors:
+The `/api/v1/scrape` detector registry ships with 15 primary platform/framework detectors:
 
 - `wordpress_core`
 - `shopify_storefront`
@@ -132,7 +134,7 @@ Detector results map into these extraction strategy families:
 
 The fallback chain is deterministic and ends with a low-content verdict instead of falsely reporting a thin shell page as a successful extract.
 
-### `POST /security-audit`
+### `POST /api/v1/security-audit`
 
 Fetches a page and scans it for:
 
@@ -161,7 +163,7 @@ Example classes of findings:
 - `prompt_injection_pattern`
 - `zero_width_characters`
 
-### `POST /dataset`
+### `POST /api/v1/dataset`
 
 Fetches a page and tries to turn documentation-style content into synthetic Q&A pairs with export-ready formats.
 
@@ -181,6 +183,18 @@ Response includes:
 - `exports.openai_chatml`
 - `exports.dpo_preference`
 - `dataset` array with questions, answers, taxonomy, and token estimates
+
+## Authentication
+
+All endpoints except `/api/v1/health` require an `X-Api-Key` header.
+
+Locally, set it in `.env`:
+
+```
+X_API_KEY=your-secret-key
+```
+
+In production (Coolify), add `X_API_KEY` as an environment variable. If the variable is not set, the middleware passes through — safe for local dev before the key is configured.
 
 ## Local Development
 
@@ -233,42 +247,45 @@ Run:
 docker run --rm -p 8000:8000 crawlee
 ```
 
-The image includes a container healthcheck against `/health`:
+The image includes a container healthcheck against `/api/v1/health`:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl --fail http://127.0.0.1:8000/health || exit 1
+  CMD curl --fail http://127.0.0.1:8000/api/v1/health || exit 1
 ```
 
 ## Example Requests
 
-### Health
+### Health (no key required)
 
 ```bash
-curl http://127.0.0.1:8000/health
+curl https://dock.sluxia.com/api/v1/health
 ```
 
 ### Scrape
 
 ```bash
-curl -X POST http://127.0.0.1:8000/scrape \
+curl -X POST https://dock.sluxia.com/api/v1/scrape \
   -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://stripe.com/docs"}'
 ```
 
 ### Security audit
 
 ```bash
-curl -X POST http://127.0.0.1:8000/security-audit \
+curl -X POST https://dock.sluxia.com/api/v1/security-audit \
   -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://sluxia.com/ohu/security-test.html"}'
 ```
 
 ### Dataset generation
 
 ```bash
-curl -X POST http://127.0.0.1:8000/dataset \
+curl -X POST https://dock.sluxia.com/api/v1/dataset \
   -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://developers.cloudflare.com/fundamentals/"}'
 ```
 
