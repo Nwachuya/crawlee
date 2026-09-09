@@ -164,25 +164,25 @@ HOME_HTML = """<!DOCTYPE html>
       background: var(--color-border);
     }
 
-    .status-badge {
-      display: flex;
+    .register-btn {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-pill);
-      font-size: 12px;
+      gap: 7px;
+      padding: 8px 18px;
+      background: var(--color-accent);
+      color: var(--color-background);
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--color-text-muted);
-      background: var(--color-surface);
-      transition: all 0.3s ease;
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      transition: background 0.2s ease, transform 0.2s ease;
+      white-space: nowrap;
     }
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--color-success);
-    }
+    .register-btn:hover { background: var(--color-accent-hover); transform: translateY(-1px); }
 
     .theme-toggle {
       width: 36px;
@@ -607,10 +607,10 @@ HOME_HTML = """<!DOCTYPE html>
           <a href="#auth" id="nav-auth">Auth</a>
         </nav>
         <div class="topbar-divider" aria-hidden="true"></div>
-        <div class="status-badge">
-          <span class="status-dot" aria-hidden="true"></span>
-          Operational
-        </div>
+        <a href="https://sluxia.com/crawlee/register" target="_blank" rel="noopener noreferrer" class="register-btn" id="registerBtn">
+          Get access
+          <iconify-icon icon="lucide:arrow-up-right" aria-hidden="true"></iconify-icon>
+        </a>
         <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
           <iconify-icon id="themeIcon" icon="lucide:moon" aria-hidden="true"></iconify-icon>
         </button>
@@ -768,41 +768,41 @@ HOME_HTML = """<!DOCTYPE html>
 
         <!-- scrape / curl -->
         <div id="code-scrape-curl" class="code-panel active" role="tabpanel">
-          <pre id="pre-scrape-curl">curl -X POST https://dock.sluxia.com/api/v1/scrape \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://stripe.com/docs",&#10;    "fit_markdown": true,&#10;    "chunk_size": 500,&#10;    "chunk_overlap": 80&#10;  }'</pre>
+          <pre id="pre-scrape-curl">curl -X POST https://crawlee.sluxia.com/api/v1/scrape \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://stripe.com/docs",&#10;    "fit_markdown": true,&#10;    "chunk_size": 500,&#10;    "chunk_overlap": 80&#10;  }'</pre>
         </div>
         <!-- scrape / js -->
         <div id="code-scrape-js" class="code-panel" role="tabpanel">
-          <pre id="pre-scrape-js">const res = await fetch('https://dock.sluxia.com/api/v1/scrape', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://stripe.com/docs',&#10;    fit_markdown: true,&#10;    chunk_size: 500,&#10;    chunk_overlap: 80&#10;  })&#10;});&#10;const data = await res.json();</pre>
+          <pre id="pre-scrape-js">const res = await fetch('https://crawlee.sluxia.com/api/v1/scrape', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://stripe.com/docs',&#10;    fit_markdown: true,&#10;    chunk_size: 500,&#10;    chunk_overlap: 80&#10;  })&#10;});&#10;const data = await res.json();</pre>
         </div>
         <!-- scrape / python -->
         <div id="code-scrape-py" class="code-panel" role="tabpanel">
-          <pre id="pre-scrape-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/scrape',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://stripe.com/docs',&#10;        'fit_markdown': True,&#10;        'chunk_size': 500,&#10;        'chunk_overlap': 80&#10;    }&#10;).json()</pre>
+          <pre id="pre-scrape-py">import requests&#10;&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/scrape',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://stripe.com/docs',&#10;        'fit_markdown': True,&#10;        'chunk_size': 500,&#10;        'chunk_overlap': 80&#10;    }&#10;).json()</pre>
         </div>
 
         <!-- audit / curl -->
         <div id="code-audit-curl" class="code-panel" role="tabpanel">
-          <pre id="pre-audit-curl">curl -X POST https://dock.sluxia.com/api/v1/security-audit \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://example.com"&#10;  }'</pre>
+          <pre id="pre-audit-curl">curl -X POST https://crawlee.sluxia.com/api/v1/security-audit \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://example.com"&#10;  }'</pre>
         </div>
         <!-- audit / js -->
         <div id="code-audit-js" class="code-panel" role="tabpanel">
-          <pre id="pre-audit-js">const res = await fetch('https://dock.sluxia.com/api/v1/security-audit', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({ url: 'https://example.com' })&#10;});&#10;const data = await res.json();</pre>
+          <pre id="pre-audit-js">const res = await fetch('https://crawlee.sluxia.com/api/v1/security-audit', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({ url: 'https://example.com' })&#10;});&#10;const data = await res.json();</pre>
         </div>
         <!-- audit / python -->
         <div id="code-audit-py" class="code-panel" role="tabpanel">
-          <pre id="pre-audit-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/security-audit',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={'url': 'https://example.com'}&#10;).json()</pre>
+          <pre id="pre-audit-py">import requests&#10;&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/security-audit',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={'url': 'https://example.com'}&#10;).json()</pre>
         </div>
 
         <!-- dataset / curl -->
         <div id="code-dataset-curl" class="code-panel" role="tabpanel">
-          <pre id="pre-dataset-curl">curl -X POST https://dock.sluxia.com/api/v1/dataset \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://developers.cloudflare.com/fundamentals/",&#10;    "min_confidence": 0.85&#10;  }'</pre>
+          <pre id="pre-dataset-curl">curl -X POST https://crawlee.sluxia.com/api/v1/dataset \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://developers.cloudflare.com/fundamentals/",&#10;    "min_confidence": 0.85&#10;  }'</pre>
         </div>
         <!-- dataset / js -->
         <div id="code-dataset-js" class="code-panel" role="tabpanel">
-          <pre id="pre-dataset-js">const res = await fetch('https://dock.sluxia.com/api/v1/dataset', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://developers.cloudflare.com/fundamentals/',&#10;    min_confidence: 0.85&#10;  })&#10;});&#10;const data = await res.json();</pre>
+          <pre id="pre-dataset-js">const res = await fetch('https://crawlee.sluxia.com/api/v1/dataset', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://developers.cloudflare.com/fundamentals/',&#10;    min_confidence: 0.85&#10;  })&#10;});&#10;const data = await res.json();</pre>
         </div>
         <!-- dataset / python -->
         <div id="code-dataset-py" class="code-panel" role="tabpanel">
-          <pre id="pre-dataset-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/dataset',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://developers.cloudflare.com/fundamentals/',&#10;        'min_confidence': 0.85&#10;    }&#10;).json()</pre>
+          <pre id="pre-dataset-py">import requests&#10;&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/dataset',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://developers.cloudflare.com/fundamentals/',&#10;        'min_confidence': 0.85&#10;    }&#10;).json()</pre>
         </div>
 
       </section>

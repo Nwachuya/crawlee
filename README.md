@@ -259,13 +259,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 ### Health (no key required)
 
 ```bash
-curl https://dock.sluxia.com/api/v1/health
+curl https://crawlee.sluxia.com/api/v1/health
 ```
 
 ### Scrape
 
 ```bash
-curl -X POST https://dock.sluxia.com/api/v1/scrape \
+curl -X POST https://crawlee.sluxia.com/api/v1/scrape \
   -H 'Content-Type: application/json' \
   -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://stripe.com/docs"}'
@@ -274,7 +274,7 @@ curl -X POST https://dock.sluxia.com/api/v1/scrape \
 ### Security audit
 
 ```bash
-curl -X POST https://dock.sluxia.com/api/v1/security-audit \
+curl -X POST https://crawlee.sluxia.com/api/v1/security-audit \
   -H 'Content-Type: application/json' \
   -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://sluxia.com/ohu/security-test.html"}'
@@ -283,7 +283,7 @@ curl -X POST https://dock.sluxia.com/api/v1/security-audit \
 ### Dataset generation
 
 ```bash
-curl -X POST https://dock.sluxia.com/api/v1/dataset \
+curl -X POST https://crawlee.sluxia.com/api/v1/dataset \
   -H 'Content-Type: application/json' \
   -H 'X-Api-Key: your-secret-key' \
   -d '{"url":"https://developers.cloudflare.com/fundamentals/"}'

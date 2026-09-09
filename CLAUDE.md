@@ -26,7 +26,7 @@ Crawlee is a high-performance FastAPI service providing three core web intellige
      .venv/bin/pip-compile --strip-extras requirements-dev.in
      ```
 2. **Live Deployment:**
-   - Deployed on Coolify at `https://dock.sluxia.com`.
+   - Deployed on Coolify at `https://crawlee.sluxia.com`.
    - All endpoints prefixed `/api/v1`. `/api/v1/health` is open; all others require `X-Api-Key` header.
    - `X_API_KEY` is set as a Coolify environment variable.
 3. **Execution Rules:**
