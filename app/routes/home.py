@@ -412,55 +412,106 @@ HOME_HTML = """<!DOCTYPE html>
       color: var(--color-text-muted);
     }
 
-    /* CODE BLOCK */
+    /* CODE SECTION */
     .code-section { padding: 80px 0; }
     .code-section h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 8px; }
     .code-section .section-sub {
       font-size: 15px;
       color: var(--color-text-muted);
-      margin-bottom: 40px;
+      margin-bottom: 32px;
     }
 
-    .code-tabs {
+    /* Endpoint selector */
+    .endpoint-selector {
       display: flex;
-      gap: 0;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .ep-btn {
+      padding: 7px 16px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--color-text-muted);
+      transition: all 0.2s ease;
+    }
+    .ep-btn.active {
+      background: var(--color-accent);
+      color: var(--color-background);
+      border-color: var(--color-accent);
+    }
+    .ep-btn:hover:not(.active) { color: var(--color-text); border-color: var(--color-accent); }
+
+    /* Language tabs + copy button */
+    .lang-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       border: 1px solid var(--color-border);
       border-bottom: none;
       background: var(--color-background);
     }
-    .code-tab {
+    .lang-tabs { display: flex; }
+    .lang-tab {
       padding: 10px 20px;
       font-family: 'Poppins', sans-serif;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       border: none;
+      border-right: 1px solid var(--color-border);
       background: transparent;
       color: var(--color-text-muted);
-      border-right: 1px solid var(--color-border);
       transition: all 0.2s ease;
     }
-    .code-tab.active { background: var(--color-surface); color: var(--color-text); }
-    .code-tab:hover:not(.active) { color: var(--color-text); }
+    .lang-tab.active { background: var(--color-surface); color: var(--color-text); }
+    .lang-tab:hover:not(.active) { color: var(--color-text); }
 
-    .code-block {
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      margin-right: 8px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--color-text-muted);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { color: var(--color-text); border-color: var(--color-accent); }
+    .copy-btn.copied { color: var(--color-success); border-color: var(--color-success); }
+
+    .code-panel {
       border: 1px solid var(--color-border);
       background: var(--color-surface);
-      padding: 32px;
+      padding: 28px 32px;
       overflow-x: auto;
       display: none;
+      min-height: 200px;
     }
-    .code-block.active { display: block; }
-    .code-block pre {
+    .code-panel.active { display: block; }
+    .code-panel pre {
       font-family: 'Courier New', monospace;
       font-size: 13px;
-      line-height: 1.7;
+      line-height: 1.8;
       color: var(--color-text);
       white-space: pre;
+      margin: 0;
     }
-    .code-comment { color: var(--color-text-muted); }
-    .code-key { color: var(--color-text); }
-    .code-string { color: var(--color-text); opacity: 0.7; }
+    .code-comment { color: var(--color-text-muted); font-style: italic; }
+    .code-key { color: var(--color-text); font-weight: 600; }
+    .code-string { color: var(--color-text-muted); }
 
     /* AUTH SECTION */
     .auth-section {
@@ -693,47 +744,67 @@ HOME_HTML = """<!DOCTYPE html>
       <section class="code-section" id="examples" aria-labelledby="examplesHeading">
         <p class="section-label">Quick start</p>
         <h2 id="examplesHeading">Copy and run.</h2>
-        <p class="section-sub">All requests need your API key in the <code>X-Api-Key</code> header, except health.</p>
+        <p class="section-sub">Pick an endpoint and language. Your API key goes in the <code>X-Api-Key</code> header.</p>
 
-        <div class="code-tabs" role="tablist" aria-label="Code examples">
-          <button class="code-tab active" role="tab" aria-selected="true" aria-controls="tab-scrape" id="btn-scrape" onclick="switchTab('scrape')">Scrape</button>
-          <button class="code-tab" role="tab" aria-selected="false" aria-controls="tab-audit" id="btn-audit" onclick="switchTab('audit')">Security audit</button>
-          <button class="code-tab" role="tab" aria-selected="false" aria-controls="tab-dataset" id="btn-dataset" onclick="switchTab('dataset')">Dataset</button>
+        <!-- Endpoint selector -->
+        <div class="endpoint-selector" role="group" aria-label="Select endpoint">
+          <button class="ep-btn active" id="ep-scrape" onclick="switchEndpoint('scrape')">Scrape</button>
+          <button class="ep-btn" id="ep-audit" onclick="switchEndpoint('audit')">Security audit</button>
+          <button class="ep-btn" id="ep-dataset" onclick="switchEndpoint('dataset')">Dataset</button>
         </div>
 
-        <div id="tab-scrape" class="code-block active" role="tabpanel" aria-labelledby="btn-scrape">
-          <pre><span class="code-comment"># Scrape a page with platform detection</span>
-curl -X POST https://dock.sluxia.com/api/v1/scrape \
-  -H <span class="code-string">'Content-Type: application/json'</span> \
-  -H <span class="code-string">'X-Api-Key: your-key'</span> \
-  -d '{
-    <span class="code-key">"url"</span>: <span class="code-string">"https://stripe.com/docs"</span>,
-    <span class="code-key">"fit_markdown"</span>: true,
-    <span class="code-key">"chunk_size"</span>: 500,
-    <span class="code-key">"chunk_overlap"</span>: 80
-  }'</pre>
+        <!-- Language tabs + copy -->
+        <div class="lang-bar">
+          <div class="lang-tabs" role="tablist" aria-label="Language">
+            <button class="lang-tab active" id="lt-curl" role="tab" aria-selected="true" onclick="switchLang('curl')">curl</button>
+            <button class="lang-tab" id="lt-js" role="tab" aria-selected="false" onclick="switchLang('js')">JavaScript</button>
+            <button class="lang-tab" id="lt-py" role="tab" aria-selected="false" onclick="switchLang('py')">Python</button>
+          </div>
+          <button class="copy-btn" id="copyBtn" onclick="copyCode()" aria-label="Copy code to clipboard">
+            <iconify-icon icon="lucide:copy" aria-hidden="true"></iconify-icon>
+            Copy
+          </button>
         </div>
 
-        <div id="tab-audit" class="code-block" role="tabpanel" aria-labelledby="btn-audit">
-          <pre><span class="code-comment"># Audit a page for prompt injection and hidden threats</span>
-curl -X POST https://dock.sluxia.com/api/v1/security-audit \
-  -H <span class="code-string">'Content-Type: application/json'</span> \
-  -H <span class="code-string">'X-Api-Key: your-key'</span> \
-  -d '{
-    <span class="code-key">"url"</span>: <span class="code-string">"https://example.com"</span>
-  }'</pre>
+        <!-- scrape / curl -->
+        <div id="code-scrape-curl" class="code-panel active" role="tabpanel">
+          <pre id="pre-scrape-curl">curl -X POST https://dock.sluxia.com/api/v1/scrape \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://stripe.com/docs",&#10;    "fit_markdown": true,&#10;    "chunk_size": 500,&#10;    "chunk_overlap": 80&#10;  }'</pre>
+        </div>
+        <!-- scrape / js -->
+        <div id="code-scrape-js" class="code-panel" role="tabpanel">
+          <pre id="pre-scrape-js">const res = await fetch('https://dock.sluxia.com/api/v1/scrape', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://stripe.com/docs',&#10;    fit_markdown: true,&#10;    chunk_size: 500,&#10;    chunk_overlap: 80&#10;  })&#10;});&#10;const data = await res.json();</pre>
+        </div>
+        <!-- scrape / python -->
+        <div id="code-scrape-py" class="code-panel" role="tabpanel">
+          <pre id="pre-scrape-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/scrape',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://stripe.com/docs',&#10;        'fit_markdown': True,&#10;        'chunk_size': 500,&#10;        'chunk_overlap': 80&#10;    }&#10;).json()</pre>
         </div>
 
-        <div id="tab-dataset" class="code-block" role="tabpanel" aria-labelledby="btn-dataset">
-          <pre><span class="code-comment"># Generate synthetic Q&A pairs from a docs page</span>
-curl -X POST https://dock.sluxia.com/api/v1/dataset \
-  -H <span class="code-string">'Content-Type: application/json'</span> \
-  -H <span class="code-string">'X-Api-Key: your-key'</span> \
-  -d '{
-    <span class="code-key">"url"</span>: <span class="code-string">"https://developers.cloudflare.com/fundamentals/"</span>,
-    <span class="code-key">"min_confidence"</span>: 0.85
-  }'</pre>
+        <!-- audit / curl -->
+        <div id="code-audit-curl" class="code-panel" role="tabpanel">
+          <pre id="pre-audit-curl">curl -X POST https://dock.sluxia.com/api/v1/security-audit \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://example.com"&#10;  }'</pre>
         </div>
+        <!-- audit / js -->
+        <div id="code-audit-js" class="code-panel" role="tabpanel">
+          <pre id="pre-audit-js">const res = await fetch('https://dock.sluxia.com/api/v1/security-audit', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({ url: 'https://example.com' })&#10;});&#10;const data = await res.json();</pre>
+        </div>
+        <!-- audit / python -->
+        <div id="code-audit-py" class="code-panel" role="tabpanel">
+          <pre id="pre-audit-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/security-audit',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={'url': 'https://example.com'}&#10;).json()</pre>
+        </div>
+
+        <!-- dataset / curl -->
+        <div id="code-dataset-curl" class="code-panel" role="tabpanel">
+          <pre id="pre-dataset-curl">curl -X POST https://dock.sluxia.com/api/v1/dataset \&#10;  -H 'Content-Type: application/json' \&#10;  -H 'X-Api-Key: YOUR_KEY' \&#10;  -d '{&#10;    "url": "https://developers.cloudflare.com/fundamentals/",&#10;    "min_confidence": 0.85&#10;  }'</pre>
+        </div>
+        <!-- dataset / js -->
+        <div id="code-dataset-js" class="code-panel" role="tabpanel">
+          <pre id="pre-dataset-js">const res = await fetch('https://dock.sluxia.com/api/v1/dataset', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://developers.cloudflare.com/fundamentals/',&#10;    min_confidence: 0.85&#10;  })&#10;});&#10;const data = await res.json();</pre>
+        </div>
+        <!-- dataset / python -->
+        <div id="code-dataset-py" class="code-panel" role="tabpanel">
+          <pre id="pre-dataset-py">import requests&#10;&#10;data = requests.post(&#10;    'https://dock.sluxia.com/api/v1/dataset',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://developers.cloudflare.com/fundamentals/',&#10;        'min_confidence': 0.85&#10;    }&#10;).json()</pre>
+        </div>
+
       </section>
 
     </div>
@@ -843,16 +914,49 @@ HTTP 200 {"success": true, ...}</pre>
       });
     })();
 
-    // Code tabs
-    function switchTab(name) {
-      document.querySelectorAll('.code-tab').forEach(function (t) {
+    // Code examples — endpoint + language state
+    var currentEndpoint = 'scrape';
+    var currentLang = 'curl';
+
+    function showPanel() {
+      document.querySelectorAll('.code-panel').forEach(function (p) { p.classList.remove('active'); });
+      var id = 'code-' + currentEndpoint + '-' + currentLang;
+      var panel = document.getElementById(id);
+      if (panel) panel.classList.add('active');
+    }
+
+    function switchEndpoint(ep) {
+      currentEndpoint = ep;
+      document.querySelectorAll('.ep-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.getElementById('ep-' + ep).classList.add('active');
+      showPanel();
+    }
+
+    function switchLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-tab').forEach(function (t) {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
       });
-      document.querySelectorAll('.code-block').forEach(function (b) { b.classList.remove('active'); });
-      document.getElementById('btn-' + name).classList.add('active');
-      document.getElementById('btn-' + name).setAttribute('aria-selected', 'true');
-      document.getElementById('tab-' + name).classList.add('active');
+      document.getElementById('lt-' + lang).classList.add('active');
+      document.getElementById('lt-' + lang).setAttribute('aria-selected', 'true');
+      showPanel();
+    }
+
+    function copyCode() {
+      var preId = 'pre-' + currentEndpoint + '-' + currentLang;
+      var pre = document.getElementById(preId);
+      if (!pre) return;
+      var text = pre.innerText || pre.textContent;
+      navigator.clipboard.writeText(text).then(function () {
+        var btn = document.getElementById('copyBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = '<iconify-icon icon="lucide:check" aria-hidden="true"></iconify-icon> Copied';
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<iconify-icon icon="lucide:copy" aria-hidden="true"></iconify-icon> Copy';
+        }, 2000);
+      });
     }
   </script>
 
