@@ -17,6 +17,6 @@
   - `POST /api/v1/scrape` — Platform detection, adaptive extraction (markdown, chunks, links, images).
   - `POST /api/v1/security-audit` — Hidden CSS, comment injection, zero-width obfuscation, secret patterns.
   - `POST /api/v1/dataset` — Synthetic Q&A dataset generation (OpenAI ChatML & DPO formats).
-- **Detector Catalog (15 Platforms):** WordPress, Shopify, Webflow, Framer, Wix, Squarespace, Next.js, Nuxt, Astro, Angular, Docusaurus, VitePress, MkDocs Material, Lovable, Bolt.
+- **Detector Catalog (16 entries; 15 platform detectors + PHP auxiliary):** WordPress, Shopify, Webflow, Framer, Wix, Squarespace, Next.js, Nuxt, Astro, Angular, Docusaurus, VitePress, MkDocs Material, Lovable, Bolt, php_server_rendered.
 - **Strategy Families:** `generic_html`, `static_marketing`, `cms_content`, `docs_content`, `commerce_content`, `spa_shell`, `ai_builder_marketing`.
 - **Docker Deployment:** Python 3.11 base image with container healthcheck on `/api/v1/health`.

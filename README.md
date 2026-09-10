@@ -96,7 +96,7 @@ Example shape:
 
 #### Detector catalog
 
-The `/api/v1/scrape` detector registry ships with 15 primary platform/framework detectors:
+The `/api/v1/scrape` detector registry ships with 16 detector entries — 15 primary platform/framework detectors plus a weak `php_server_rendered` auxiliary signal:
 
 - `wordpress_core`
 - `shopify_storefront`
@@ -113,6 +113,7 @@ The `/api/v1/scrape` detector registry ships with 15 primary platform/framework 
 - `mkdocs_material`
 - `lovable_built`
 - `bolt_built`
+- `php_server_rendered` (auxiliary — weak signals, never clears the confidence threshold)
 
 If no detector clears the confidence threshold, the response falls back to:
 

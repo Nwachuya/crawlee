@@ -3,7 +3,7 @@
 ## Identity
 
 Crawlee is a high-performance FastAPI service providing three core web intelligence workflows:
-1. **Adaptive Web Scraping (`/api/v1/scrape`):** Automated site framework detection (15 detectors: Next.js, Shopify, Webflow, Framer, Wix, Docusaurus, VitePress, etc.) and adaptive extraction strategy execution (markdown, links, images, optional chunks).
+1. **Adaptive Web Scraping (`/api/v1/scrape`):** Automated site framework detection (16 registry entries — 15 threshold-clearing platform detectors plus a weak PHP fallback signal: Next.js, Shopify, Webflow, Framer, Wix, Docusaurus, VitePress, etc.) and adaptive extraction strategy execution (markdown, links, images, optional chunks).
 2. **Security & Prompt Injection Audit (`/api/v1/security-audit`):** Hidden CSS elements, off-screen text, HTML comment injections, hostile attributes, script-embedded secrets, and zero-width obfuscation scanning.
 3. **Synthetic Q&A Dataset Generation (`/api/v1/dataset`):** Ingestion of documentation-style pages into export-ready OpenAI ChatML and DPO preference datasets.
 

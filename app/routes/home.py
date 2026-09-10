@@ -651,8 +651,8 @@ HOME_HTML = """<!DOCTYPE html>
     <div class="page">
       <div class="stats-row" style="margin-top: 80px;" role="list" aria-label="Key metrics">
         <div class="stat-cell" role="listitem">
-          <span class="stat-number">15</span>
-          <span class="stat-label">Platform detectors</span>
+          <span class="stat-number">16</span>
+          <span class="stat-label">Detector entries</span>
         </div>
         <div class="stat-cell" role="listitem">
           <span class="stat-number">7</span>
