@@ -659,11 +659,11 @@ HOME_HTML = """<!DOCTYPE html>
           <span class="stat-label">Extraction strategy families</span>
         </div>
         <div class="stat-cell" role="listitem">
-          <span class="stat-number">3</span>
+          <span class="stat-number">4</span>
           <span class="stat-label">Core endpoints</span>
         </div>
         <div class="stat-cell" role="listitem">
-          <span class="stat-number">36</span>
+          <span class="stat-number">74</span>
           <span class="stat-label">Regression tests</span>
         </div>
       </div>
@@ -671,7 +671,7 @@ HOME_HTML = """<!DOCTYPE html>
       <!-- ENDPOINTS -->
       <section class="section" id="endpoints" aria-labelledby="endpointsHeading">
         <p class="section-label">Endpoints</p>
-        <h2 id="endpointsHeading">Three workflows. One base URL.</h2>
+        <h2 id="endpointsHeading">Four workflows. One base URL.</h2>
 
         <div class="endpoint-grid" role="list">
 
@@ -737,6 +737,24 @@ HOME_HTML = """<!DOCTYPE html>
             </div>
           </div>
 
+          <div class="endpoint-card" role="listitem">
+            <div class="endpoint-header">
+              <div class="endpoint-icon" aria-hidden="true">
+                <iconify-icon icon="lucide:search"></iconify-icon>
+              </div>
+              <span class="method-badge">POST</span>
+            </div>
+            <h3>Web Search</h3>
+            <div class="endpoint-path">/api/v1/search</div>
+            <p class="endpoint-desc">
+              Queries the web via an anti-bot-resilient multi-backend engine (ddgs primary, DDG-lite/Bing/Google News RSS fallback). Returns up to 10 results with title, snippet, URL, and date. Supports region-aware queries and optional social-network filtering.
+            </p>
+            <div class="tag-list" aria-label="Search features">
+              <span class="tag">region</span>
+              <span class="tag">exclude_social</span>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -751,6 +769,7 @@ HOME_HTML = """<!DOCTYPE html>
           <button class="ep-btn active" id="ep-scrape" onclick="switchEndpoint('scrape')">Scrape</button>
           <button class="ep-btn" id="ep-audit" onclick="switchEndpoint('audit')">Security audit</button>
           <button class="ep-btn" id="ep-dataset" onclick="switchEndpoint('dataset')">Dataset</button>
+          <button class="ep-btn" id="ep-search" onclick="switchEndpoint('search')">Search</button>
         </div>
 
         <!-- Language tabs + copy -->
@@ -800,9 +819,25 @@ HOME_HTML = """<!DOCTYPE html>
         <div id="code-dataset-js" class="code-panel" role="tabpanel">
           <pre id="pre-dataset-js">const res = await fetch('https://crawlee.sluxia.com/api/v1/dataset', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    url: 'https://developers.cloudflare.com/fundamentals/',&#10;    min_confidence: 0.85&#10;  })&#10;});&#10;const data = await res.json();</pre>
         </div>
-        <!-- dataset / python -->
+<!-- dataset / python -->
         <div id="code-dataset-py" class="code-panel" role="tabpanel">
-          <pre id="pre-dataset-py">import requests&#10;&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/dataset',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://developers.cloudflare.com/fundamentals/',&#10;        'min_confidence': 0.85&#10;    }&#10;).json()</pre>
+          <pre id="pre-dataset-py">import requests&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/dataset',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'url': 'https://developers.cloudflare.com/fundamentals/',&#10;        'min_confidence': 0.85&#10;    }&#10;).json()</pre>
+        </div>
+
+        <!-- search / curl -->
+        <div id="code-search-curl" class="code-panel" role="tabpanel">
+          <pre id="pre-search-curl">curl -X POST https://crawlee.sluxia.com/api/v1/search \
+  -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: YOUR_KEY' \
+  -d '{"query": "crawlee", "count": 10, "region": "us", "exclude_social": false}'</pre>
+        </div>
+        <!-- search / js -->
+        <div id="code-search-js" class="code-panel" role="tabpanel">
+          <pre id="pre-search-js">const res = await fetch('https://crawlee.sluxia.com/api/v1/search', {&#10;  method: 'POST',&#10;  headers: {&#10;    'Content-Type': 'application/json',&#10;    'X-Api-Key': 'YOUR_KEY'&#10;  },&#10;  body: JSON.stringify({&#10;    query: 'crawlee',&#10;    count: 10,&#10;    region: 'us',&#10;    exclude_social: false&#10;  })&#10;});&#10;const data = await res.json();</pre>
+        </div>
+        <!-- search / python -->
+        <div id="code-search-py" class="code-panel" role="tabpanel">
+          <pre id="pre-search-py">import requests&#10;data = requests.post(&#10;    'https://crawlee.sluxia.com/api/v1/search',&#10;    headers={&#10;        'Content-Type': 'application/json',&#10;        'X-Api-Key': 'YOUR_KEY'&#10;    },&#10;    json={&#10;        'query': 'crawlee',&#10;        'count': 10,&#10;        'region': 'us',&#10;        'exclude_social': False&#10;    }&#10;).json()</pre>
         </div>
 
       </section>
@@ -843,7 +878,7 @@ HOME_HTML = """<!DOCTYPE html>
             <div class="auth-rule">
               <iconify-icon icon="lucide:key" aria-hidden="true"></iconify-icon>
               <div>
-                <strong>POST /api/v1/dataset</strong>
+                <strong>POST /api/v1/search</strong>
                 Requires X-Api-Key header.
               </div>
             </div>

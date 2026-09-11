@@ -2,10 +2,11 @@
 
 ## Identity
 
-Crawlee is a high-performance FastAPI service providing three core web intelligence workflows:
+Crawlee is a high-performance FastAPI service providing four core web intelligence workflows:
 1. **Adaptive Web Scraping (`/api/v1/scrape`):** Automated site framework detection (16 registry entries — 15 threshold-clearing platform detectors plus a weak PHP fallback signal: Next.js, Shopify, Webflow, Framer, Wix, Docusaurus, VitePress, etc.) and adaptive extraction strategy execution (markdown, links, images, optional chunks).
 2. **Security & Prompt Injection Audit (`/api/v1/security-audit`):** Hidden CSS elements, off-screen text, HTML comment injections, hostile attributes, script-embedded secrets, and zero-width obfuscation scanning.
 3. **Synthetic Q&A Dataset Generation (`/api/v1/dataset`):** Ingestion of documentation-style pages into export-ready OpenAI ChatML and DPO preference datasets.
+4. **Web Search (`/api/v1/search`):** Anti-bot-resilient web query via ddjs (DDG JSON API primary) with DDG-lite/Bing/Google News RSS fallback cascade; region-aware queries (`region` param maps to cc/lang/mkt across all 4 backends); optional social-noise filtering (`exclude_social` strict bool).
 
 ## Resources
 
@@ -19,7 +20,7 @@ Crawlee is a high-performance FastAPI service providing three core web intellige
 1. **Local Setup:**
    - Python 3.12 runtime (`.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000`).
    - Copy `.env` and set `X_API_KEY` for local auth testing.
-   - Run test suite: `.venv/bin/python -m pytest -q` (36 passing regression tests).
+   - Run test suite: `.venv/bin/python -m pytest -q` (74 passing regression tests).
    - Refresh lockfiles with `pip-compile`:
      ```bash
      .venv/bin/pip-compile --strip-extras requirements.in

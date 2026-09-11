@@ -1,8 +1,9 @@
 # crawlee
 
-FastAPI service for three web-content workflows:
+FastAPI service for four web-content workflows:
 
 - scrape a page into markdown, links, images, and optional chunks
+- search the web with an anti-bot-resilient multi-backend query engine
 - audit a page for hidden prompt-injection and secret-leak patterns
 - generate synthetic Q&A dataset pairs from documentation-style pages
 
@@ -185,7 +186,58 @@ Response includes:
 - `exports.dpo_preference`
 - `dataset` array with questions, answers, taxonomy, and token estimates
 
-## Authentication
+### `POST /api/v1/search`
+
+Web search via an anti-bot-resilient multi-backend engine. Primary backend is the DDG JSON API (`ddgs~=9.16`), with DDG-lite, Bing, and Google News RSS as fallback cascade. Returns up to 10 results with `{title, snippet, url, date}`.
+
+Request body:
+
+```json
+{
+  "query": "crawlee web scraping",
+  "count": 10,
+  "freshness": "week",
+  "region": "us",
+  "exclude_social": false
+}
+```
+
+Params:
+
+- **query** (required, 2–200 chars): search term
+- **count** (optional, 1–10, default 10): number of results to return
+- **freshness** (optional, `day|week|month|year|all`, default `week`): recency filter
+- **region** (optional, 2-letter country code, default `"us"`, `pattern: ^[A-Za-z]{2}$`): maps to `{ddg}`/`{cc}/{lang}/{mkt}` across all 4 backends; unknown codes fall back to `"us"`
+- **exclude_social** (optional, strict bool, default `false`): when `true`, drops walled-garden social-network results (Facebook, LinkedIn, Instagram, X/Twitter, TikTok, Snapchat, Pinterest, Threads); Reddit and YouTube are intentionally kept. JSON booleans only — `"yes"`/`"no"` strings are rejected with 422.
+
+Response includes these additions:
+
+- `results` array of `{title, snippet, url, date}`
+
+Example shape:
+
+```json
+{
+  "query": "crawlee web scraping",
+  "count": 5,
+  "results": [
+    {
+      "title": "Crawlee Docs",
+      "snippet": "Web scraping framework for Python.",
+      "url": "https://crawlee.jina.ai",
+      "date": ""
+    }
+  ]
+}
+```
+
+Notes:
+
+- Search never fetches arbitrary user-provided URLs (no SSRF surface). URL-fetching is handled internally via curl_cffi-backed engines and the internal fetch guard.
+- Region drives all 4 backends: ddgs passes `region`; DDG-lite maps `cc` and `lang`; Bing uses `cc`, `setlang`, and `setmkt` in the URL; News RSS sets `hl`, `gl`, and `ceid` per country+language. Default `us` is used when the region code is not in the `REGION_META` mapping.
+- Default `exclude_social: false` preserves parity with the Brainbox source; set `true` to filter out social-noise results. The set of domains is intentionally walled-garden only: Facebook, LinkedIn, Instagram, X, Twitter, TikTok, Snapchat, Pinterest, Threads.
+
+---
 
 All endpoints except `/api/v1/health` require an `X-Api-Key` header.
 
@@ -232,7 +284,7 @@ python3.12 -m venv .venv
 .venv/bin/pip-compile --strip-extras requirements-dev.in
 ```
 
-As of August 30, 2026, the local regression suite passes with 36 tests.
+As of August 30, 2026, the local regression suite passes with 74 tests.
 
 ## Docker
 
@@ -290,6 +342,15 @@ curl -X POST https://crawlee.sluxia.com/api/v1/dataset \
   -d '{"url":"https://developers.cloudflare.com/fundamentals/"}'
 ```
 
+### Search
+
+```bash
+curl -X POST https://crawlee.sluxia.com/api/v1/search \
+  -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: your-secret-key' \
+  -d '{"query":"crawlee","count":10,"region":"us","exclude_social":false}'
+```
+
 ## Project Layout
 
 ```text
@@ -306,6 +367,8 @@ curl -X POST https://crawlee.sluxia.com/api/v1/dataset \
 │       ├── fetch.py
 │       ├── scrape.py
 │       ├── security.py
+│       ├── search.py
+│       ├── ssrf.py
 │       └── strategy.py
 ├── main.py
 └── requirements.txt

@@ -1,6 +1,6 @@
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, StrictBool, model_validator
 
 
 class BaseRequest(BaseModel):
@@ -28,3 +28,11 @@ class AuditRequest(BaseRequest):
 
 class DatasetRequest(BaseRequest):
     min_confidence: Optional[float] = 0.80
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    count: int = Field(default=10, ge=1, le=10)
+    freshness: Literal["day", "week", "month", "year", "all"] = "week"
+    region: str = Field(default="us", pattern=r"^[A-Za-z]{2}$")
+    exclude_social: StrictBool = False

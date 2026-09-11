@@ -1,5 +1,5 @@
 from app.application import app
-from app.schemas import AuditRequest, BaseRequest, DatasetRequest, ScrapeRequest
+from app.schemas import AuditRequest, BaseRequest, DatasetRequest, ScrapeRequest, SearchRequest
 from app.services.dataset import (
     ENTITY_REGEX,
     build_export_formats,
@@ -9,7 +9,7 @@ from app.services.dataset import (
 )
 from app.services.detection import DETECTORS, detect_site_type
 from app.services.fetch import fetch_html, fetch_page
-from app.services.scrape import build_chunks, build_scrape_response, extract_custom_selectors, extract_images, extract_links
+from app.services.search import web_search
 from app.services.security import (
     COMMENT_REGEX,
     HIDDEN_SELECTORS,
@@ -29,6 +29,7 @@ __all__ = [
     "BaseRequest",
     "DatasetRequest",
     "ScrapeRequest",
+    "SearchRequest",
     "COMMENT_REGEX",
     "DETECTORS",
     "ENTITY_REGEX",
@@ -54,4 +55,5 @@ __all__ = [
     "run_scrape_strategy",
     "scan_security_threats",
     "should_flag_hidden_text",
+    "web_search",
 ]

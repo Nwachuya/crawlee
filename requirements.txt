@@ -23,13 +23,17 @@ charset-normalizer==3.5.1
     #   htmldate
     #   trafilatura
 click==8.5.0
-    # via uvicorn
+    # via
+    #   ddgs
+    #   uvicorn
 courlan==1.4.0
     # via trafilatura
 curl-cffi==0.7.1
     # via -r requirements.in
 dateparser==1.4.2
     # via htmldate
+ddgs==9.16.0
+    # via -r requirements.in
 fastapi==0.141.1
     # via -r requirements.in
 h11==0.16.0
@@ -42,12 +46,15 @@ justext==3.0.2
     # via trafilatura
 lxml==6.1.2
     # via
+    #   ddgs
     #   htmldate
     #   justext
     #   lxml-html-clean
     #   trafilatura
 lxml-html-clean==0.4.5
     # via lxml
+primp==2.0.0
+    # via ddgs
 pycparser==3.0
     # via cffi
 pydantic==2.13.5
